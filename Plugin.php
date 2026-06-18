@@ -2,12 +2,12 @@
 if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 /**
  * Fediverse Sync for Typecho
- * 将新文章自动同步到 Mastodon/GoToSocial/Misskey 实例
+ * 将新文章自动同步到 Mastodon/GoToSocial/Misskey 实例 1.6.5新增http/socks5代理支持
  * 
  * @package FediverseSync
- * @version 1.6.4
- * @author 老孙
- * @link https://www.imsun.org
+ * @version 1.6.5
+ * @author 老孙 xfox DeepSeek
+ * @link https://github.com/AXFOX/FediverseSyncForTypecho
  */
 class FediverseSync_Plugin implements Typecho_Plugin_Interface
 {
