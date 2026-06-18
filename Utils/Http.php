@@ -34,6 +34,40 @@ class FediverseSync_Utils_Http
     }
 
     /**
+     * 记录 HTTP 请求失败详情到日志
+     *
+     * @param string $url     请求 URL
+     * @param int    $httpCode HTTP 状态码
+     * @param mixed  $ch       cURL 句柄（用于获取错误信息）
+     */
+    private static function logError($url, $httpCode, $ch = null)
+    {
+        $curlError = '';
+        $curlErrno = 0;
+        if ($ch !== null) {
+            $curlError = curl_error($ch);
+            $curlErrno = curl_errno($ch);
+        }
+
+        // 截断响应内容，避免日志过大
+        $responsePreview = self::$lastResponse;
+        if ($responsePreview !== null && strlen($responsePreview) > 500) {
+            $responsePreview = substr($responsePreview, 0, 500) . '... [truncated]';
+        }
+
+        $logMessage = sprintf(
+            "HTTP request failed | URL=%s | HTTP_Code=%d | cURL_Errno=%d | cURL_Error=%s | Response=%s",
+            $url,
+            $httpCode,
+            $curlErrno,
+            $curlError ?: 'none',
+            $responsePreview !== null ? $responsePreview : 'empty'
+        );
+
+        error_log('FediverseSync: ' . $logMessage);
+    }
+
+    /**
      * 发送GET请求
      */
     public function get($url, $headers = [])
@@ -79,6 +113,7 @@ class FediverseSync_Utils_Http
                 return json_decode(self::$lastResponse, true);
             }
 
+            self::logError($url, self::$lastHttpCode, $ch);
             return null;
         }
     }
@@ -140,6 +175,7 @@ class FediverseSync_Utils_Http
             return json_decode(self::$lastResponse, true);
         }
 
+        self::logError($url, self::$lastHttpCode, $ch);
         return null;
     }
 
@@ -189,6 +225,7 @@ class FediverseSync_Utils_Http
             return json_decode(self::$lastResponse, true);
         }
 
+        self::logError($url, self::$lastHttpCode, $ch);
         return null;
     }
 }
