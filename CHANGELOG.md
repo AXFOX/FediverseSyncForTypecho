@@ -1,6 +1,34 @@
 # Fediverse Sync for Typecho - 更新日志
 
-## 版本 1.6.4 (2025-12-19)
+## 版本 1.6.5 (2026-06-18)
+
+### 新增功能
+- **SOCKS5/HTTP 代理支持**
+  - 新增可选代理配置，支持 HTTP 和 SOCKS5 两种代理类型
+  - SOCKS5 使用远端 DNS 解析（`CURLPROXY_SOCKS5_HOSTNAME`），避免 DNS 污染
+  - 支持代理认证（用户名/密码）
+  - 适用于中国大陆等网络受限环境
+
+### 重构优化
+- **HTTP 请求统一重构**
+  - 将分散在 Plugin.php、Action.php、Api/Sync.php 中的 6 处原始 cURL 调用集中到 `Utils/Http.php`
+  - 新增 `postForm()` 方法，统一处理 Mastodon/GoToSocial 的表单编码 POST 请求
+  - Header 去重处理，避免重复 header 导致 400 错误
+  - 代理逻辑由 `Utils/Proxy.php` 集中管理，一处配置全局生效
+
+### 调试改进
+- **增强 HTTP 层错误日志**
+  - 请求失败时自动记录 URL、HTTP 状态码、cURL 错误号和错误描述、响应体预览
+  - Proxy 应用代理时记录代理类型和地址，便于确认代理是否生效
+
+### 文件结构
+```
+FediverseSync/
+├── Utils/
+│   ├── Proxy.php           # 增强：支持 SOCKS5+HTTP 代理类型选择
+│   └── Http.php            # 增强：新增 postForm() + 代理集成 + 日志增强
+└── Plugin.php              # 新增5个代理配置项
+```
 
 ### 行为调整
 - `{content}` 使用文章原始 Markdown 文本（保留换行等结构），不再做 HTML 去标签与空白压缩
