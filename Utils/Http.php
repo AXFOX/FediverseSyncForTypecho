@@ -82,17 +82,31 @@ class FediverseSync_Utils_Http
         } else {
             // Mastodon/GoToSocial API
             $defaultHeaders = [
-                'Authorization: Bearer ' . $options->access_token,
-                'Accept: application/json',
-                'Content-Type: application/json',
-                'User-Agent: TypechoFediverseSync/1.4.0'
+                'Authorization' => 'Bearer ' . $options->access_token,
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'User-Agent' => 'TypechoFediverseSync/1.4.0',
             ];
+
+            // 合并 header（调用方传入的覆盖默认值）
+            $headerMap = $defaultHeaders;
+            foreach ($headers as $header) {
+                $colonPos = strpos($header, ':');
+                if ($colonPos !== false) {
+                    $key = trim(substr($header, 0, $colonPos));
+                    $headerMap[$key] = trim(substr($header, $colonPos + 1));
+                }
+            }
+            $curlHeaders = [];
+            foreach ($headerMap as $key => $value) {
+                $curlHeaders[] = "$key: $value";
+            }
 
             $ch = curl_init();
             curl_setopt_array($ch, [
                 CURLOPT_URL => $url,
                 CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_HTTPHEADER => array_merge($defaultHeaders, $headers),
+                CURLOPT_HTTPHEADER => $curlHeaders,
                 CURLOPT_SSL_VERIFYPEER => false,
                 CURLOPT_SSL_VERIFYHOST => 0
             ]);
@@ -133,18 +147,32 @@ class FediverseSync_Utils_Http
             }
             
             $defaultHeaders = [
-                'Content-Type: application/json',
-                'Accept: application/json',
-                'User-Agent: TypechoFediverseSync/1.4.0'
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'User-Agent' => 'TypechoFediverseSync/1.4.0',
             ];
         } else {
             // Mastodon/GoToSocial API
             $defaultHeaders = [
-                'Authorization: Bearer ' . $options->access_token,
-                'Content-Type: application/json',
-                'Accept: application/json',
-                'User-Agent: TypechoFediverseSync/1.4.0'
+                'Authorization' => 'Bearer ' . $options->access_token,
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json',
+                'User-Agent' => 'TypechoFediverseSync/1.4.0',
             ];
+        }
+
+        // 合并 header（调用方传入的覆盖默认值）
+        $headerMap = $defaultHeaders;
+        foreach ($headers as $header) {
+            $colonPos = strpos($header, ':');
+            if ($colonPos !== false) {
+                $key = trim(substr($header, 0, $colonPos));
+                $headerMap[$key] = trim(substr($header, $colonPos + 1));
+            }
+        }
+        $curlHeaders = [];
+        foreach ($headerMap as $key => $value) {
+            $curlHeaders[] = "$key: $value";
         }
 
         $ch = curl_init();
@@ -153,7 +181,7 @@ class FediverseSync_Utils_Http
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => json_encode($data),
-            CURLOPT_HTTPHEADER => array_merge($defaultHeaders, $headers),
+            CURLOPT_HTTPHEADER => $curlHeaders,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => 0
         ]);
@@ -191,12 +219,24 @@ class FediverseSync_Utils_Http
     {
         $options = Helper::options()->plugin('FediverseSync');
 
-        $defaultHeaders = [
-            'Authorization: Bearer ' . $options->access_token,
-            'Content-Type: application/x-www-form-urlencoded; charset=UTF-8',
-            'Accept: application/json',
-            'User-Agent: FediverseSync/1.6.4'
+        // 构建 header 映射（调用方传入的 header 会覆盖默认值，避免重复）
+        $headerMap = [
+            'Authorization' => 'Bearer ' . $options->access_token,
+            'Content-Type' => 'application/x-www-form-urlencoded; charset=UTF-8',
+            'Accept' => 'application/json',
+            'User-Agent' => 'FediverseSync/1.6.4',
         ];
+        foreach ($headers as $header) {
+            $colonPos = strpos($header, ':');
+            if ($colonPos !== false) {
+                $key = trim(substr($header, 0, $colonPos));
+                $headerMap[$key] = trim(substr($header, $colonPos + 1));
+            }
+        }
+        $curlHeaders = [];
+        foreach ($headerMap as $key => $value) {
+            $curlHeaders[] = "$key: $value";
+        }
 
         $ch = curl_init();
         curl_setopt_array($ch, [
@@ -204,7 +244,7 @@ class FediverseSync_Utils_Http
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => http_build_query($data),
-            CURLOPT_HTTPHEADER => array_merge($defaultHeaders, $headers),
+            CURLOPT_HTTPHEADER => $curlHeaders,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => 0
         ]);

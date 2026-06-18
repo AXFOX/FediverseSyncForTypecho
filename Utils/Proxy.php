@@ -23,10 +23,11 @@ class FediverseSync_Utils_Proxy
             return;
         }
 
+        $proxyType = $options->proxy_type ?? 'http';
+
         curl_setopt($ch, CURLOPT_PROXY, $options->proxy_url);
 
         // 代理类型：SOCKS5 使用远端 DNS 解析（CURLPROXY_SOCKS5_HOSTNAME）避免 DNS 污染
-        $proxyType = $options->proxy_type ?? 'http';
         if ($proxyType === 'socks5') {
             curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
         } else {
@@ -37,5 +38,13 @@ class FediverseSync_Utils_Proxy
         if (!empty($options->proxy_username) && !empty($options->proxy_password)) {
             curl_setopt($ch, CURLOPT_PROXYUSERPWD, $options->proxy_username . ':' . $options->proxy_password);
         }
+
+        // 调试日志：记录实际代理配置
+        error_log(sprintf(
+            'FediverseSync Proxy: type=%s url=%s auth=%s',
+            $proxyType,
+            $options->proxy_url,
+            (!empty($options->proxy_username) ? 'yes' : 'no')
+        ));
     }
 }
