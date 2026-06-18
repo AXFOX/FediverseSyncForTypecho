@@ -205,6 +205,59 @@ class FediverseSync_Plugin implements Typecho_Plugin_Interface
         );
         $form->addInput($api_timeout);
         
+        // ========== 代理设置（可选，用于中国大陆等网络受限环境）==========
+        $enable_proxy = new Typecho_Widget_Helper_Form_Element_Radio(
+            'enable_proxy',
+            array(
+                '1' => _t('启用'),
+                '0' => _t('禁用'),
+            ),
+            '0',
+            _t('启用代理'),
+            _t('通过代理服务器访问 Fediverse 实例，适用于网络受限环境')
+        );
+        $form->addInput($enable_proxy);
+
+        $proxy_type = new Typecho_Widget_Helper_Form_Element_Radio(
+            'proxy_type',
+            array(
+                'http' => _t('HTTP'),
+                'socks5' => _t('SOCKS5'),
+            ),
+            'http',
+            _t('代理类型'),
+            _t('选择代理服务器类型（SOCKS5 使用远端 DNS 解析以避免 DNS 污染）')
+        );
+        $form->addInput($proxy_type);
+
+        $proxy_url = new Typecho_Widget_Helper_Form_Element_Text(
+            'proxy_url',
+            NULL,
+            '',
+            _t('代理地址'),
+            _t('代理服务器地址，如 127.0.0.1:1080 或 socks5://127.0.0.1:1080')
+        );
+        $form->addInput($proxy_url);
+
+        $proxy_username = new Typecho_Widget_Helper_Form_Element_Text(
+            'proxy_username',
+            NULL,
+            '',
+            _t('代理用户名'),
+            _t('代理认证用户名（可选）')
+        );
+        $form->addInput($proxy_username);
+
+        $proxy_password = new Typecho_Widget_Helper_Form_Element_Text(
+            'proxy_password',
+            NULL,
+            '',
+            _t('代理密码'),
+            _t('代理认证密码（可选）')
+        );
+        $form->addInput($proxy_password);
+        // ========== 代理设置结束 ==========
+        
         // 添加删除数据表选项（仅在插件禁用时使用）
         $drop_tables = new Typecho_Widget_Helper_Form_Element_Radio(
             'drop_tables',
@@ -400,35 +453,23 @@ class FediverseSync_Plugin implements Typecho_Plugin_Interface
                 ];
             }
 
-            $ch = curl_init();
-            curl_setopt_array($ch, [
-                CURLOPT_URL => $api_url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_POST => true,
-                CURLOPT_POSTFIELDS => ($instance_type === 'misskey') ? json_encode($post_data) : http_build_query($post_data),
-                CURLOPT_HTTPHEADER => $headers
-            ]);
-            
-            // 设置超时
-            if (!empty($pluginOptions->api_timeout)) {
-                curl_setopt($ch, CURLOPT_TIMEOUT, intval($pluginOptions->api_timeout));
+            $http = new FediverseSync_Utils_Http();
+            if ($instance_type === 'misskey') {
+                $responseData = $http->post($api_url, $post_data, $headers);
+            } else {
+                $responseData = $http->postForm($api_url, $post_data, $headers);
             }
-
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            $httpCode = FediverseSync_Utils_Http::getLastHttpCode();
+            $response = FediverseSync_Utils_Http::getRawResponse();
 
             if ($isDebug) {
                 self::log($cid, 'sync', 'debug', 'API Response: ' . $response);
                 self::log($cid, 'sync', 'debug', 'HTTP Code: ' . $httpCode);
             }
 
-            if (($httpCode !== 200 && $httpCode !== 204) || empty($response)) {
+            if ($responseData === null) {
                 throw new Exception('HTTP Error: ' . $httpCode);
             }
-            
-            // 处理响应并保存绑定关系
-            $responseData = json_decode($response, true);
             
             if ($instance_type === 'misskey') {
                 // 为Misskey创建绑定关系

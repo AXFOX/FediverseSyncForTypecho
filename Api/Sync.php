@@ -131,31 +131,15 @@ class FediverseSync_Api_Sync
             'visibility' => $options->visibility
         ];
 
-        // 初始化 curl
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $api_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($post_data));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        // 使用统一的 HTTP 工具发送请求（自动包含代理设置）
+        $http = new FediverseSync_Utils_Http();
+        $response = $http->postForm($api_url, $post_data, [
             'Authorization: Bearer ' . $access_token,
             'Content-Type: application/x-www-form-urlencoded; charset=UTF-8',
             'Accept: application/json',
             'User-Agent: FediverseSync/1.6.4'
         ]);
-        
-        // 设置超时
-        if (!empty($options->api_timeout)) {
-            curl_setopt($ch, CURLOPT_TIMEOUT, intval($options->api_timeout));
-        }
-
-        // 执行请求并获取响应
-        $response_json = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        // 解析响应
-        $response = json_decode($response_json, true);
+        $http_code = FediverseSync_Utils_Http::getLastHttpCode();
 
         // 调试输出
         if ($options->debug_mode == '1') {
@@ -164,7 +148,7 @@ class FediverseSync_Api_Sync
         }
 
         // 检查响应
-        if ($http_code !== 200 || !$response) {
+        if ($response === null) {
             throw new Exception('Failed to post to Mastodon. HTTP Code: ' . $http_code);
         }
 
@@ -219,30 +203,14 @@ class FediverseSync_Api_Sync
             'visibility' => $visibility
         ];
 
-        // 初始化 curl
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $api_url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_data));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        // 使用统一的 HTTP 工具发送请求（自动包含代理设置）
+        $http = new FediverseSync_Utils_Http();
+        $response = $http->post($api_url, $post_data, [
             'Content-Type: application/json',
             'Accept: application/json',
             'User-Agent: FediverseSync/1.6.4'
         ]);
-        
-        // 设置超时
-        if (!empty($options->api_timeout)) {
-            curl_setopt($ch, CURLOPT_TIMEOUT, intval($options->api_timeout));
-        }
-
-        // 执行请求并获取响应
-        $response_json = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        // 解析响应
-        $response = json_decode($response_json, true);
+        $http_code = FediverseSync_Utils_Http::getLastHttpCode();
 
         // 调试输出
         if ($options->debug_mode == '1') {
@@ -251,7 +219,7 @@ class FediverseSync_Api_Sync
         }
 
         // 检查响应
-        if ($http_code !== 200 && $http_code !== 204 || !$response) {
+        if ($response === null) {
             throw new Exception('Failed to post to Misskey. HTTP Code: ' . $http_code);
         }
 

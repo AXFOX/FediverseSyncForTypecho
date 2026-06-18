@@ -250,25 +250,16 @@ class FediverseSync_Action extends Typecho_Widget implements Widget_Interface_Do
             );
         }
 
-        $ch = curl_init();
-        curl_setopt_array($ch, array(
-            CURLOPT_URL => $url,
-            CURLOPT_POST => true,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_POSTFIELDS => ($instance_type === 'misskey') ? json_encode($data) : http_build_query($data)
-        ));
-        
-        // 设置超时
-        if (!empty($pluginOptions->api_timeout)) {
-            curl_setopt($ch, CURLOPT_TIMEOUT, intval($pluginOptions->api_timeout));
+        $http = new FediverseSync_Utils_Http();
+        if ($instance_type === 'misskey') {
+            $result = $http->post($url, $data, $headers);
+        } else {
+            $result = $http->postForm($url, $data, $headers);
         }
+        $httpCode = FediverseSync_Utils_Http::getLastHttpCode();
+        $response = FediverseSync_Utils_Http::getRawResponse();
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if (($httpCode !== 200 && $httpCode !== 204) || empty($response)) {
+        if ($result === null) {
             throw new Exception('HTTP Error: ' . $httpCode . ' Response: ' . $response);
         }
 

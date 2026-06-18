@@ -4,6 +4,36 @@ if (!defined('__TYPECHO_ROOT_DIR__')) exit;
 class FediverseSync_Utils_Http
 {
     /**
+     * @var int 最近一次请求的 HTTP 状态码
+     */
+    private static $lastHttpCode = 0;
+
+    /**
+     * @var string|null 最近一次请求的原始响应
+     */
+    private static $lastResponse = null;
+
+    /**
+     * 获取最近一次请求的 HTTP 状态码
+     *
+     * @return int
+     */
+    public static function getLastHttpCode()
+    {
+        return self::$lastHttpCode;
+    }
+
+    /**
+     * 获取最近一次请求的原始响应字符串
+     *
+     * @return string|null
+     */
+    public static function getRawResponse()
+    {
+        return self::$lastResponse;
+    }
+
+    /**
      * 发送GET请求
      */
     public function get($url, $headers = [])
@@ -38,12 +68,15 @@ class FediverseSync_Utils_Http
                 curl_setopt($ch, CURLOPT_TIMEOUT, intval($options->api_timeout));
             }
 
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            // 应用代理设置
+            FediverseSync_Utils_Proxy::applyProxySettings($ch);
+
+            self::$lastResponse = curl_exec($ch);
+            self::$lastHttpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($httpCode === 200) {
-                return json_decode($response, true);
+            if (self::$lastHttpCode === 200) {
+                return json_decode(self::$lastResponse, true);
             }
 
             return null;
@@ -51,7 +84,7 @@ class FediverseSync_Utils_Http
     }
 
     /**
-     * 发送POST请求
+     * 发送POST请求（JSON 编码）
      */
     public function post($url, $data, $headers = [])
     {
@@ -95,13 +128,65 @@ class FediverseSync_Utils_Http
             curl_setopt($ch, CURLOPT_TIMEOUT, intval($options->api_timeout));
         }
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        // 应用代理设置
+        FediverseSync_Utils_Proxy::applyProxySettings($ch);
+
+        self::$lastResponse = curl_exec($ch);
+        self::$lastHttpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         // Misskey API可能返回204
-        if ($httpCode === 200 || ($instance_type === 'misskey' && $httpCode === 204)) {
-            return json_decode($response, true);
+        if (self::$lastHttpCode === 200 || ($instance_type === 'misskey' && self::$lastHttpCode === 204)) {
+            return json_decode(self::$lastResponse, true);
+        }
+
+        return null;
+    }
+
+    /**
+     * 发送 POST 请求（Form 编码，用于 Mastodon/GoToSocial）
+     *
+     * @param string $url
+     * @param array  $data
+     * @param array  $headers
+     * @return array|null
+     */
+    public function postForm($url, $data, $headers = [])
+    {
+        $options = Helper::options()->plugin('FediverseSync');
+
+        $defaultHeaders = [
+            'Authorization: Bearer ' . $options->access_token,
+            'Content-Type: application/x-www-form-urlencoded; charset=UTF-8',
+            'Accept: application/json',
+            'User-Agent: FediverseSync/1.6.4'
+        ];
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($data),
+            CURLOPT_HTTPHEADER => array_merge($defaultHeaders, $headers),
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => 0
+        ]);
+
+        // 设置超时
+        if (!empty($options->api_timeout)) {
+            curl_setopt($ch, CURLOPT_TIMEOUT, intval($options->api_timeout));
+        }
+
+        // 应用代理设置
+        FediverseSync_Utils_Proxy::applyProxySettings($ch);
+
+        self::$lastResponse = curl_exec($ch);
+        self::$lastHttpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if (self::$lastHttpCode === 200 || self::$lastHttpCode === 204) {
+            return json_decode(self::$lastResponse, true);
         }
 
         return null;
